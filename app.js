@@ -18,6 +18,7 @@ async function init() {
 
         statusEl.textContent = 'Model ready!';
         btn.disabled = false;
+        btn.removeAttribute('aria-disabled');
     } catch (err) {
         statusEl.textContent = 'Error loading model: ' + err.message;
     }
