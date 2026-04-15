@@ -1,6 +1,4 @@
-import { RandomForestRegression } from 'https://cdn.jsdelivr.net/npm/ml-random-forest@2/+esm';
-
-let model = null;
+let modelData = null;
 
 const statusEl = document.getElementById('status');
 const form = document.getElementById('predict-form');
@@ -11,10 +9,7 @@ const predictionEl = document.getElementById('prediction');
 async function init() {
     try {
         const res = await fetch('model_data.json');
-        const data = await res.json();
-
-        model = new RandomForestRegression({ nEstimators: 50, seed: 42 });
-        model.train(data.X, data.y);
+        modelData = await res.json();
 
         statusEl.textContent = 'Model ready!';
         btn.disabled = false;
@@ -24,9 +19,22 @@ async function init() {
     }
 }
 
+function predict(rawInput) {
+    // Apply StandardScaler: (x - mean) / scale
+    const scaled = rawInput.map((val, i) =>
+        (val - modelData.scaler_mean[i]) / modelData.scaler_scale[i]
+    );
+    // Dot product with coefficients + intercept
+    let result = modelData.intercept;
+    for (let i = 0; i < scaled.length; i++) {
+        result += scaled[i] * modelData.coef[i];
+    }
+    return result;
+}
+
 form.addEventListener('submit', (e) => {
     e.preventDefault();
-    if (!model) return;
+    if (!modelData) return;
 
     const input = [
         parseFloat(document.getElementById('spotify_playlist_count').value) || 0,
@@ -40,8 +48,7 @@ form.addEventListener('submit', (e) => {
         parseFloat(document.getElementById('explicit_track').value) || 0
     ];
 
-    const result = model.predict([input]);
-    const score = Math.min(100, Math.max(0, Math.round(result[0])));
+    const score = Math.min(100, Math.max(0, Math.round(predict(input))));
     predictionEl.textContent = score + ' / 100';
     resultEl.classList.remove('hidden');
 });
